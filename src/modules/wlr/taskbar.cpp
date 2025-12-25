@@ -138,20 +138,19 @@ Task::Task(const waybar::Bar &bar, const Json::Value &config, Taskbar *tbar,
   /* Handle click events if configured */
   if (config_["on-click"].isString() || config_["on-click-middle"].isString() ||
       config_["on-click-right"].isString()) {
+    button.add_events(Gdk::BUTTON_PRESS_MASK);
+    button.signal_button_release_event().connect(sigc::mem_fun(*this, &Task::handle_clicked), false);
+
+    button.signal_motion_notify_event().connect(sigc::mem_fun(*this, &Task::handle_motion_notify),
+                                                false);
+
+    button.drag_source_set(target_entries, Gdk::BUTTON1_MASK, Gdk::ACTION_MOVE);
+    button.drag_dest_set(target_entries, Gtk::DEST_DEFAULT_ALL, Gdk::ACTION_MOVE);
+
+    button.signal_drag_data_get().connect(sigc::mem_fun(*this, &Task::handle_drag_data_get), false);
+    button.signal_drag_data_received().connect(sigc::mem_fun(*this, &Task::handle_drag_data_received),
+                                               false);
   }
-
-  button.add_events(Gdk::BUTTON_PRESS_MASK);
-  button.signal_button_release_event().connect(sigc::mem_fun(*this, &Task::handle_clicked), false);
-
-  button.signal_motion_notify_event().connect(sigc::mem_fun(*this, &Task::handle_motion_notify),
-                                              false);
-
-  button.drag_source_set(target_entries, Gdk::BUTTON1_MASK, Gdk::ACTION_MOVE);
-  button.drag_dest_set(target_entries, Gtk::DEST_DEFAULT_ALL, Gdk::ACTION_MOVE);
-
-  button.signal_drag_data_get().connect(sigc::mem_fun(*this, &Task::handle_drag_data_get), false);
-  button.signal_drag_data_received().connect(sigc::mem_fun(*this, &Task::handle_drag_data_received),
-                                             false);
 }
 
 Task::~Task() {

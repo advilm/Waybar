@@ -337,6 +337,7 @@ if get_option('niri')
     src_files += files(
         'src/modules/niri/backend.cpp',
         'src/modules/niri/language.cpp',
+        'src/modules/niri/taskbar.cpp',
         'src/modules/niri/window.cpp',
         'src/modules/niri/workspaces.cpp',
     )
