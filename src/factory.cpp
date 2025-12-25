@@ -39,6 +39,7 @@
 #endif
 #ifdef HAVE_NIRI
 #include "modules/niri/language.hpp"
+#include "modules/niri/taskbar.hpp"
 #include "modules/niri/window.hpp"
 #include "modules/niri/workspaces.hpp"
 #endif
@@ -225,6 +226,9 @@ waybar::AModule* waybar::Factory::makeModule(const std::string& name,
 #ifdef HAVE_NIRI
     if (ref == "niri/language") {
       return new waybar::modules::niri::Language(id, bar_, config_[name]);
+    }
+    if (ref == "niri/taskbar") {
+      return new waybar::modules::niri::Taskbar(id, bar_, config_[name]);
     }
     if (ref == "niri/window") {
       return new waybar::modules::niri::Window(id, bar_, config_[name]);
