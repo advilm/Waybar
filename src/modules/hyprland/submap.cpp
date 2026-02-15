@@ -2,14 +2,10 @@
 
 #include <spdlog/spdlog.h>
 
-#include "util/sanitize_str.hpp"
-
 namespace waybar::modules::hyprland {
 
 Submap::Submap(const std::string& id, const Bar& bar, const Json::Value& config)
     : ALabel(config, "submap", id, "{}", 0, true), bar_(bar), m_ipc(IPC::inst()) {
-  modulesReady = true;
-
   parseConfig(config);
 
   label_.hide();
@@ -48,12 +44,23 @@ auto Submap::parseConfig(const Json::Value& config) -> void {
 auto Submap::update() -> void {
   std::lock_guard<std::mutex> lg(mutex_);
 
+  // Handle style class changes
+  if (!prev_submap_.empty()) {
+    label_.get_style_context()->remove_class(prev_submap_);
+  }
+
+  if (!submap_.empty()) {
+    label_.get_style_context()->add_class(submap_);
+  }
+
+  prev_submap_ = submap_;
+
   if (submap_.empty()) {
     event_box_.hide();
   } else {
     label_.set_markup(fmt::format(fmt::runtime(format_), submap_));
     if (tooltipEnabled()) {
-      label_.set_tooltip_text(submap_);
+      label_.set_tooltip_markup(submap_);
     }
     event_box_.show();
   }
@@ -70,17 +77,11 @@ void Submap::onEvent(const std::string& ev) {
 
   auto submapName = ev.substr(ev.find_first_of('>') + 2);
 
-  if (!submap_.empty()) {
-    label_.get_style_context()->remove_class(submap_);
-  }
-
   submap_ = submapName;
 
   if (submap_.empty() && always_on_) {
     submap_ = default_submap_;
   }
-
-  label_.get_style_context()->add_class(submap_);
 
   spdlog::debug("hyprland submap onevent with {}", submap_);
 

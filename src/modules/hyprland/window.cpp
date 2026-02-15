@@ -21,7 +21,6 @@ Window::Window(const std::string& id, const Bar& bar, const Json::Value& config)
     : AAppIconLabel(config, "window", id, "{title}", 0, true), bar_(bar), m_ipc(IPC::inst()) {
   std::unique_lock<std::shared_mutex> windowIpcUniqueLock(windowIpcSmtx);
 
-  modulesReady = true;
   separateOutputs_ = config["separate-outputs"].asBool();
 
   // register for hyprland ipc
@@ -45,6 +44,8 @@ Window::~Window() {
 
 auto Window::update() -> void {
   std::shared_lock<std::shared_mutex> windowIpcShareLock(windowIpcSmtx);
+
+  queryActiveWorkspace();
 
   std::string windowName = waybar::util::sanitize_string(workspace_.last_window_title);
   std::string windowAddress = workspace_.last_window;
@@ -71,13 +72,13 @@ auto Window::update() -> void {
       tooltip_format = config_["tooltip-format"].asString();
     }
     if (!tooltip_format.empty()) {
-      label_.set_tooltip_text(
+      label_.set_tooltip_markup(
           fmt::format(fmt::runtime(tooltip_format), fmt::arg("title", windowName),
                       fmt::arg("initialTitle", windowData_.initial_title),
                       fmt::arg("class", windowData_.class_name),
                       fmt::arg("initialClass", windowData_.initial_class_name)));
     } else if (!label_text.empty()) {
-      label_.set_tooltip_text(label_text);
+      label_.set_tooltip_markup(label_text);
     }
   }
 
@@ -236,11 +237,7 @@ void Window::queryActiveWorkspace() {
   }
 }
 
-void Window::onEvent(const std::string& ev) {
-  queryActiveWorkspace();
-
-  dp.emit();
-}
+void Window::onEvent(const std::string& ev) { dp.emit(); }
 
 void Window::setClass(const std::string& classname, bool enable) {
   if (enable) {

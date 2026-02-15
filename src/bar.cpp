@@ -229,7 +229,8 @@ waybar::Bar::Bar(struct waybar_output* w_output, const Json::Value& w_config)
   gtk_layer_init_for_window(gtk_window);
   gtk_layer_set_keyboard_mode(gtk_window, GTK_LAYER_SHELL_KEYBOARD_MODE_NONE);
   gtk_layer_set_monitor(gtk_window, output->monitor->gobj());
-  gtk_layer_set_namespace(gtk_window, "waybar");
+  gtk_layer_set_namespace(gtk_window,
+                          config["name"].isString() ? config["name"].asCString() : "waybar");
 
   gtk_layer_set_margin(gtk_window, GTK_LAYER_SHELL_EDGE_LEFT, margins_.left);
   gtk_layer_set_margin(gtk_window, GTK_LAYER_SHELL_EDGE_RIGHT, margins_.right);
@@ -433,7 +434,18 @@ void waybar::Bar::onMap(GdkEventAny* /*unused*/) {
   /*
    * Obtain a pointer to the custom layer surface for modules that require it (idle_inhibitor).
    */
-  auto* gdk_window = window.get_window()->gobj();
+  auto gdk_window_ref = window.get_window();
+  if (!gdk_window_ref) {
+    spdlog::warn("Failed to get GDK window during onMap, deferring surface initialization");
+    return;
+  }
+
+  auto* gdk_window = gdk_window_ref->gobj();
+  if (!gdk_window) {
+    spdlog::warn("GDK window object is null during onMap, deferring surface initialization");
+    return;
+  }
+
   surface = gdk_wayland_window_get_wl_surface(gdk_window);
   configureGlobalOffset(gdk_window_get_width(gdk_window), gdk_window_get_height(gdk_window));
 

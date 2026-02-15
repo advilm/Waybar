@@ -89,9 +89,11 @@ void waybar::modules::Custom::continuousWorker() {
         dp.emit();
         spdlog::error("{} stopped unexpectedly, is it endless?", name_);
       }
-      if (config_["restart-interval"].isUInt()) {
+      if (config_["restart-interval"].isNumeric()) {
         pid_ = -1;
-        thread_.sleep_for(std::chrono::seconds(config_["restart-interval"].asUInt()));
+        thread_.sleep_for(std::chrono::milliseconds(
+            std::max(1L,  // Minimum 1ms due to millisecond precision
+                     static_cast<long>(config_["restart-interval"].asDouble() * 1000))));
         fp_ = util::command::open(cmd, pid_, output_name_);
         if (!fp_) {
           throw std::runtime_error("Unable to open " + cmd);
@@ -134,7 +136,7 @@ void waybar::modules::Custom::waitingWorker() {
 }
 
 void waybar::modules::Custom::refresh(int sig) {
-  if (sig == SIGRTMIN + config_["signal"].asInt()) {
+  if (config_["signal"].isInt() && sig == SIGRTMIN + config_["signal"].asInt()) {
     thread_.wake_up();
   }
 }
@@ -185,13 +187,9 @@ auto waybar::modules::Custom::update() -> void {
                 fmt::arg("icon", getIcon(percentage_, alt_)), fmt::arg("percentage", percentage_));
             label_.set_tooltip_markup(tooltip);
           } else if (text_ == tooltip_) {
-            if (label_.get_tooltip_markup() != str) {
-              label_.set_tooltip_markup(str);
-            }
+            label_.set_tooltip_markup(str);
           } else {
-            if (label_.get_tooltip_markup() != tooltip_) {
-              label_.set_tooltip_markup(tooltip_);
-            }
+            label_.set_tooltip_markup(tooltip_);
           }
         }
         auto style = label_.get_style_context();

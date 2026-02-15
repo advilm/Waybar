@@ -74,6 +74,17 @@ Item::Item(const std::string& bn, const std::string& op, const Json::Value& conf
                                    cancellable_, interface);
 }
 
+Item::~Item() {
+  if (this->gtk_menu != nullptr) {
+    this->gtk_menu->popdown();
+    this->gtk_menu->detach();
+  }
+  if (this->dbus_menu != nullptr) {
+    g_object_weak_unref(G_OBJECT(this->dbus_menu), (GWeakNotify)onMenuDestroyed, this);
+    this->dbus_menu = nullptr;
+  }
+}
+
 bool Item::handleMouseEnter(GdkEventCrossing* const& e) {
   event_box.set_state_flags(Gtk::StateFlags::STATE_FLAG_PRELIGHT);
   return false;
@@ -226,9 +237,13 @@ void Item::setCustomIcon(const std::string& id) {
   std::string custom_icon = IconManager::instance().getIconForApp(id);
   if (!custom_icon.empty()) {
     if (std::filesystem::exists(custom_icon)) {
-      Glib::RefPtr<Gdk::Pixbuf> custom_pixbuf = Gdk::Pixbuf::create_from_file(custom_icon);
-      icon_name = "";  // icon_name has priority over pixmap
-      icon_pixmap = custom_pixbuf;
+      try {
+        Glib::RefPtr<Gdk::Pixbuf> custom_pixbuf = Gdk::Pixbuf::create_from_file(custom_icon);
+        icon_name = "";  // icon_name has priority over pixmap
+        icon_pixmap = custom_pixbuf;
+      } catch (const Glib::Error& e) {
+        spdlog::error("Failed to load custom icon {}: {}", custom_icon, e.what());
+      }
     } else {  // if file doesn't exist it's most likely an icon_name
       icon_name = custom_icon;
     }
@@ -443,6 +458,9 @@ void Item::makeMenu() {
       gtk_menu->attach_to_widget(event_box);
     }
   }
+  // Manually reset prelight to make sure the tray item doesn't stay in a hover state even though
+  // the menu is focused
+  event_box.unset_state_flags(Gtk::StateFlags::STATE_FLAG_PRELIGHT);
 }
 
 bool Item::handleClick(GdkEventButton* const& ev) {
